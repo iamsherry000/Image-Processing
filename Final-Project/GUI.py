@@ -3,19 +3,7 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 import numpy as np
 import cv2
-'''
-def open_file():
-    global img
-    filename=filedialog.askopenfilename()     #獲取文件全路徑
-    img = Image.open(filename)
-    thumb_size=(600,600)
-    img.thumbnail(thumb_size)
-    # img=ImageTk.PhotoImage(Image.open(filename))   #tkinter只能打開gif文件，這裏用PIL庫
-    img1 = ImageTk.PhotoImage(img)
-    mainImage.config(image=img1) 
-    mainImage['height'] = 600
-    mainImage['width'] = 670
-'''
+
 def open_file():
     global imgS,imgO
     filename=filedialog.askopenfilename()     #獲取文件全路徑
