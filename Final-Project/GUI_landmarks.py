@@ -3,7 +3,8 @@
 # think: (solved)
     # 調整image大小能不能opencv完成? (solved)
     # 不行的話，PIL轉成opencv?
-# notice:每次show圖片之前要delete all
+# notice: 每次show圖片之前要delete all
+# Reference: https://www.796t.com/content/1547209506.html
 
 import tkinter as tk
 from tkinter import filedialog
@@ -54,7 +55,7 @@ def Renew():
 def rection(img): # OpenCV 測68個點
     #dlib預測器
     detector = dlib.get_frontal_face_detector()    #使用dlib庫提供的人臉提取器
-    predictor = dlib.shape_predictor('D:/github/Image-Processing/Final-Project/shape_predictor_68_face_landmarks.dat')   #構建特徵提取器
+    predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')   #構建特徵提取器
     # 取灰度
     img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     # 人臉數rects
