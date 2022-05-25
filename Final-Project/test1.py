@@ -1,84 +1,126 @@
-# Mouse 相關
-
-from PIL import Image, ImageTk
 import numpy as np
 import cv2
-import dlib
-from imutils import face_utils
 
-global ShowPoint    # 0:unshow 1:circle 2:number 3:1+2
-ShowPoint = 0
-global Mouse_start,Mouse_end,border  # 49-67
-Mouse_start = 49-1
-Mouse_end = 68-1
-border = 5
+class trans():
+    def __init__(self, img, pi):
+        width, height = img.shape[:2]
+        pcth = np.repeat(np.arange(height).reshape(height, 1), [width], axis=1)
+        pctw = np.repeat(np.arange(width).reshape(width, 1), [height], axis=1).T
 
+        self.img_coordinate = np.swapaxes(np.array([pcth, pctw]), 1, 2).T
+        self.cita = compute_G(self.img_coordinate, pi, height, width)
+        self.pi = pi
+        self.W, self.A, self.Z = pre_compute_waz(self.pi, height, width, self.img_coordinate)
+        self.height = height
+        self.width = width
+
+    def deformation(self, img, qi):
+
+        qi = self.pi * 2 - qi
+        mapxy = np.swapaxes(np.float32(compute_fv(qi, self.W, self.A, self.Z, self.height, self.width, self.cita, self.img_coordinate)), 0, 1)
+        img = cv2.remap(img, mapxy[:, :, 0], mapxy[:, :, 1], borderMode=cv2.BORDER_WRAP, interpolation=cv2.INTER_LINEAR)
+
+        return img
+def pre_compute_waz(pi, height, width, img_coordinate):
+    # height*width*控制点个数
+    wi = np.reciprocal(np.power(np.linalg.norm(np.subtract(pi, img_coordinate.reshape(height, width, 1, 2)) + 0.000000001, axis=3),2))
+
+    # height*width*2
+    pstar = np.divide(np.matmul(wi,pi), np.sum(wi, axis=2).reshape(height,width,1))
+
+    # height*width*控制点个数*2
+    phat = np.subtract(pi, pstar.reshape(height, width, 1, 2))
+
+    z1 = np.subtract(img_coordinate, pstar)
+    z2 = np.repeat(np.swapaxes(np.array([z1[:,:,1], -z1[:,:,0]]), 1, 2).T.reshape(height,width,1,2,1), [pi.shape[0]], axis=2)
+
+    # height*width*控制点个数*2*1
+    z1 = np.repeat(z1.reshape(height,width,1,2,1), [pi.shape[0]], axis=2)
+
+    # height*width*控制点个数*1*2
+    s1 = phat.reshape(height,width,pi.shape[0],1,2)
+    s2 = np.concatenate((s1[:,:,:,:,1], -s1[:,:,:,:,0]), axis=3).reshape(height,width,pi.shape[0],1,2)
+
+    a = np.matmul(s1, z1)
+    b = np.matmul(s1, z2)
+    c = np.matmul(s2, z1)
+    d = np.matmul(s2, z2)
+
+    # 重构wi形状
+    ws = np.repeat(wi.reshape(height,width,pi.shape[0],1),[4],axis=3)
+
+    # height*width*控制点个数*2*2
+    A = (ws * np.concatenate((a,b,c,d), axis=3).reshape(height,width,pi.shape[0],4)).reshape(height,width,pi.shape[0],2,2)
+
+    return wi, A, z1
+def compute_fv(qi, W, A, Z, height, width, cita, img_coordinate):   
+    qstar = np.divide(np.matmul(W,qi), np.sum(W, axis=2).reshape(height,width,1))
+    qhat = np.subtract(qi, qstar.reshape(height, width, 1, 2)).reshape(height, width, qi.shape[0], 1, 2)
+    fv_ = np.sum(np.matmul(qhat, A),axis=2)
+    fv = np.linalg.norm(Z[:,:,0,:,:],axis=2) / (np.linalg.norm(fv_,axis=3)+0.0000000001) * fv_[:,:,0,:] + qstar
+    fv = (fv - img_coordinate) * cita.reshape(height, width, 1) + img_coordinate
+    return fv
+def compute_G(img_coordinate, pi, height, width, thre = 0.7):
+    max = np.max(pi, 0)
+    min = np.min(pi, 0)
+
+    length = np.max(max - min)
+
+    # 计算控制区域中心
+    # p_ = (max + min) // 2
+    p_ = np.sum(pi,axis=0) // pi.shape[0]
+
+    # 计算控制区域
+    minx, miny = min - length
+    maxx, maxy = max + length
+    minx = minx if minx > 0 else 0
+    miny = miny if miny > 0 else 0
+    maxx = maxx if maxx < height else height
+    maxy = maxy if maxy < width else width
+
+    k1 =(p_ - [0,0])[1] / (p_ - [0,0])[0]
+    k2 =(p_ - [height,0])[1] / (p_ - [height,0])[0]
+    k4 =(p_ - [0,width])[1] / (p_ - [0,width])[0]
+    k3 =(p_ - [height, width])[1] / (p_ - [height, width])[0]
+    k = (np.subtract(p_, img_coordinate)[:, :, 1] / (np.subtract(p_, img_coordinate)[:, :, 0] + 0.000000000001)).reshape(height, width, 1)
+    k = np.concatenate((img_coordinate, k), axis=2)
+
+    k[:,:p_[1],0][(k[:,:p_[1],2] > k1) | (k[:,:p_[1],2] < k2)] = (np.subtract(p_[1], k[:,:,1]) / p_[1]).reshape(height, width, 1)[:,:p_[1],0][(k[:,:p_[1],2] > k1) | (k[:,:p_[1],2] < k2)]
+    k[:,p_[1]:,0][(k[:,p_[1]:,2] > k3) | (k[:,p_[1]:,2] < k4)] = (np.subtract(k[:,:,1], p_[1]) / (width - p_[1])).reshape(height, width, 1)[:,p_[1]:,0][(k[:,p_[1]:,2] > k3) | (k[:,p_[1]:,2] < k4)]
+    k[:p_[0],:,0][(k1 >= k[:p_[0],:,2]) & (k[:p_[0],:,2] >= k4)] = (np.subtract(p_[0], k[:,:,0]) / p_[0]).reshape(height, width, 1)[:p_[0],:,0][(k1 >= k[:p_[0],:,2]) & (k[:p_[0],:,2] >= k4)]
+    k[p_[0]:,:,0][(k3 >= k[p_[0]:,:,2]) & (k[p_[0]:,:,2] >= k2)] = (np.subtract(k[:,:,0], p_[0]) / (height - p_[0])).reshape(height, width, 1)[p_[0]:,:,0][(k3 >= k[p_[0]:,:,2]) & (k[p_[0]:,:,2] >= k2)]
+
+    cita = np.exp(-np.power(k[:,:,0] / thre,2))
+    cita[minx:maxx,miny:maxy] = 1
+    # 如果不需要局部变形，可以把cita的值全置为1
+    # cita = 1
+
+    return cita
+def onMouse(event,x,y,flags,param):
+    x,y = y,x
+    if event == cv2.EVENT_LBUTTONDOWN:
+        print("(x,y)=(%d,%d)"%(x,y),end=" ")
+
+global img
+path = "D:/github/Image-Processing/Images/face9.png"
 '''
-def MouseDetection(img):
-    # Mouse座標點
-    MousePoints = point[Mouse_start:Mouse_end]
-    # 凸點範圍，嘴巴外圍左邊點
-    MouseHull = cv2.convexHull(MousePoints)
-    # 繪製嘴巴多邊形輪廓
-    cv2.drawContours(img, [MouseHull], -1, (0,255,0),1)
-    # 近似替代為矩形
-    xr,yr,wr,hr = cv2.boundingRect(MouseHull)
-    # cv2.rectangle(img, (xr - border,yr - border), (xr+wr+border,yr+hr+border), (0,255,9),2)
-'''
-
-def ShowPoints_func(img):
-    
-    if ShowPoint == 1 or ShowPoint == 3:       
-        # 利用cv2.circle給每個特徵點畫一個圈，共68個
-        cv2.circle(img, pos, 5, color=(0, 255, 0))
+img = cv2.imread(path,-1)
+cv2.namedWindow(path)
+cv2.setMouseCallback(path,onMouse)
+cv2.imshow(path,img)
+cv2.waitKey(0)
+''' 
         
-    if ShowPoint == 2 or ShowPoint == 3: 
-        # 利用cv2.putText輸出1-68
-        font = cv2.FONT_HERSHEY_SIMPLEX    
-        # 各引數依次是：圖片，新增的文字，座標，字型，字型大小，顏色，字型粗細
-        cv2.putText(img, str(idx+1), pos, font, 0.8, (0, 0, 255), 1,cv2.LINE_AA)
-        
+# 里面输入你的图片位置，绝对位置和相对位置都可以
+img = cv2.imread('D:/github/Image-Processing/Images/face9.png')
+# pi = np.array([228, 141, 326, 166, 401, 262, 298, 357, 196, 373]).reshape(-1, 2)
+# qi = np.array([228, 141, 329, 164, 401, 262, 321, 345, 164, 373]).reshape(-1, 2)
+pi = np.array([202,292, 183,327, 202,350, 213,321]).reshape(-1, 2)
+qi = np.array([202,292, 182,320, 202,350, 221,330]).reshape(-1, 2)
 
+ddd = trans(img, pi)
+img2 = ddd.deformation(img, qi)
 
-def rection(img): # OpenCV 測68個點   
-    global pos,idx,point,rects,shape        
-    #dlib預測器
-    detector = dlib.get_frontal_face_detector()    #使用dlib庫提供的人臉提取器
-    predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')   #構建特徵提取器
-    # 取灰度
-    img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    # 人臉數rects
-    rects = detector(img_gray, 0)
-    
-    for i in range(len(rects)):
-        landmarks = np.matrix([[p.x, p.y] for p in predictor(img,rects[i]).parts()])  #人臉關鍵點識別
-        for idx, point in enumerate(landmarks):        #enumerate函式遍歷序列中的元素及它們的下標
-            # 68點的座標
-            pos = (point[0, 0], point[0, 1])
-            # print(idx,pos) 
-            ShowPoints_func(img)
-            
-    for rect in rects:
-        shape = predictor(img_gray,rect)  # 預測值
-        points = face_utils.shape_to_np(shape)
-        # Mouse座標點
-        MousePoints = point[Mouse_start:Mouse_end]
-        # 凸點範圍，嘴巴外圍左邊點
-        MouseHull = cv2.convexHull(MousePoints)
-        # 繪製嘴巴多邊形輪廓
-        cv2.drawContours(img, [MouseHull], -1, (0,255,0),1)
-        # 近似替代為矩形
-        xr,yr,wr,hr = cv2.boundingRect(MouseHull)
-        cv2.rectangle(img, (xr - border,yr - border), (xr+wr+border,yr+hr+border), (0,255,9),2)
-    
-    return img
-    
-    
-def main():
-    imgS = cv2.imread("face11.png") # 用opencv的方法
-    rection(imgS)
-    cv2.imshow("test",imgS)  # 顯示圖片
-    cv2.waitKey(0)  # 按任意鍵退出
-    cv2.destroyAllWindows()  # 關閉window
-    
-main()
+cv2.imshow('old', img)
+cv2.imshow('new', img2)
+cv2.waitKey(0)
