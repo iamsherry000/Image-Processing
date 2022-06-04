@@ -1,7 +1,6 @@
 import numpy as np
 import cv2     
 
-'''    
 def eye_deformation(landmarks,img,state,enlarge_value):
     
     global Leyepts2,Reyepts2,eyeDispts2,LReyePos2,LReyePos1
@@ -25,9 +24,9 @@ def eye_deformation(landmarks,img,state,enlarge_value):
                         ,[landmarks[10,0],landmarks[10,1]],[landmarks[12,0],landmarks[12,1]]
                         ,[landmarks[16,0],landmarks[16,1]]])
     
-    eyeDispts1 = faceDispts1.copy() #[臉]
-    eyeDispts1 = np.append(eyeDispts1,Leyepts1,axis=0)  #[臉，[臉]，[左眼]]
-    eyeDispts1 = np.append(eyeDispts1,Reyepts1,axis=0)  #[臉，[臉]，[左眼]，[臉，[臉]，[左眼]]，[右眼]]
+    eyeDispts1 = faceDispts1.copy()
+    eyeDispts1 = np.append(eyeDispts1,Leyepts1,axis=0)
+    eyeDispts1 = np.append(eyeDispts1,Reyepts1,axis=0)
     
     
     if(state==1):
@@ -71,76 +70,6 @@ def eye_deformation(landmarks,img,state,enlarge_value):
     
 
     return img3
-
-'''
-
-def mouth_deformation(landmarks,img,state,enlarge_value):
-    # mouth 外圍: 
-    '''
-                51      53
-               /   \52/    \   
-            50     /63      54
-          /    /62     \64   \
-        49   61          65  55
-          \    \68      /66    /
-            60     \67/    56
-              \     58    /     
-                \59/   \57
-    '''
-    
-    # global Mouth_pts2
-    # global Mouse_Dist_pts2
-    # global Mouth_pos2
-    
-    global Mouth_pts2,Mouse_Dist_pts2,Mouth_pos2
-    
-    MouthPosCenter = np.uint32([(landmarks[48,0]+landmarks[54,0])/2,(landmarks[48,1]+landmarks[54,1])/2])
-    facePosCenter = np.uint32([landmarks[30,0]+landmarks[30,1]])
-    '''
-    Mouth_pts = np.uint32([[landmarks[36,0],landmarks[36,1]],[landmarks[37,0],landmarks[37,1]]
-                       ,[landmarks[38,0],landmarks[38,1]],[landmarks[39,0],landmarks[39,1]]
-                       ,[landmarks[40,0],landmarks[40,1]],[landmarks[41,0],landmarks[41,1]]
-                       ,[MouthPosCenter]]) 
-    '''
-    start = 49-1
-    end = 60
-    for i in range(start,end): # (48,60) 
-        Mouth_pts1 = np.uint32.append([[landmarks[i,0],landmarks[i,1]]])
-        
-    faceDispts1 = np.uint32([[landmarks[0,0],landmarks[0,1]],[landmarks[4,0],landmarks[4,1]]
-                        ,[landmarks[6,0],landmarks[6,1]],[landmarks[8,0],landmarks[8,1]]
-                        ,[landmarks[10,0],landmarks[10,1]],[landmarks[12,0],landmarks[12,1]]
-                        ,[landmarks[16,0],landmarks[16,1]]])
-    
-    Mouse_Dist_pts1 = faceDispts1.copy()
-    Mouse_Dist_pts1 = np.append(Mouse_Dist_pts1,axis=0)
-    
-    if(state==1):
-        Mouth_pts2 = eye_deformation_enlarge_Pos(Mouth_pts1,MouthPosCenter,enlarge_value)            
-    elif(state==2):
-        Mouth_pts2 = eye_deformation_high_Pos(Mouth_pts1,MouthPosCenter,enlarge_value)            
-    elif(state==3):
-        Mouth_pts2 = eye_deformation_distance_Pos(Mouth_pts1,-1,enlarge_value)         
-    elif(state==4):
-        faceDispts2 = Face_deformation_pos(faceDispts1,facePosCenter,enlarge_value)  
-    
-    if(state==3):
-        Mouse_Dist_pts2 = faceDispts1.copy()
-        Mouse_Dist_pts2 = np.append(Mouse_Dist_pts2,Mouth_pts2,axis=0)
-        initial = trans(img, Mouse_Dist_pts1)
-        img3 = initial.deformation(img, Mouse_Dist_pts2)
-    elif(state==4):
-        initial = trans(img, faceDispts1)
-        img3 = initial.deformation(img, faceDispts2)
-    else:
-        Mouth_pos1 = Mouth_pts1.copy()
-        Mouth_pos1 = np.append(Mouth_pos1,axis=0)
-        Mouth_pos2 = Mouth_pts2.copy()
-        Mouth_pos2 = np.append(Mouth_pos2,axis=0)
-        initial = trans(img, Mouth_pos1)
-        img3 = initial.deformation(img, Mouth_pos2)
-    
-
 
 #調整頂點位置放大縮小
 
