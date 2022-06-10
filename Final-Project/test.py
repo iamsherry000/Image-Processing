@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 import dlib
 from imutils import face_utils
+from test1 import *
 
 global ShowPoint    # 0:unshow 1:circle 2:number 3:1+2
 ShowPoint = 0

@@ -1,4 +1,5 @@
-# Mouse 相關
+# landmarks_v1.py 
+# 0:unshow 1:circle 2:number 3:1+2
 
 from PIL import Image, ImageTk
 import numpy as np

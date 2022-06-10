@@ -1,78 +1,58 @@
-'''
-Reference from github: 
-    https://github.com/wendy9910/Digital_Image_Pricessing
-'''
+# MLS_Deformation.py
 import numpy as np
-import cv2     
+import cv2                #影象處理庫OpenCV
+import dlib               #人臉識別庫dlib
 
-def eye_deformation(landmarks,img,state,enlarge_value):
+def mouth_deformation(landmarks,img,state,enlarge_value):
+    # mouth 外圍: 
+    '''
+                51      53
+               /   \52/    \   
+            50     /63      54
+          /    /62     \64   \
+        49   61          65  55
+          \    \68      /66    /
+            60     \67/    56
+              \     58    /     
+                \59/   \57
+    '''
     
-    global Leyepts2,Reyepts2,eyeDispts2,LReyePos2,LReyePos1
-   
-    LeyePosCenter = np.uint32([(landmarks[36,0]+landmarks[39,0])/2,(landmarks[36,1]+landmarks[39,1])/2])
-    ReyePosCenter = np.uint32([(landmarks[42,0]+landmarks[45,0])/2,(landmarks[42,1]+landmarks[45,1])/2])
+    # global Mouth_pts2
+    # global Mouse_Dist_pts2
+    # global Mouth_pos2
+    
+    global Mouth_pts2,Mouse_Dist_pts2,Mouth_pos2
+    
+    MouthPosCenter = np.uint32([(landmarks[48,0]+landmarks[54,0])/2,(landmarks[48,1]+landmarks[54,1])/2])
     facePosCenter = np.uint32([landmarks[30,0]+landmarks[30,1]])
     
-    Leyepts1 = np.uint32([[landmarks[36,0],landmarks[36,1]],[landmarks[37,0],landmarks[37,1]]
-                       ,[landmarks[38,0],landmarks[38,1]],[landmarks[39,0],landmarks[39,1]]
-                       ,[landmarks[40,0],landmarks[40,1]],[landmarks[41,0],landmarks[41,1]]
-                       ,[(landmarks[36,0]+landmarks[39,0])/2,(landmarks[36,1]+landmarks[39,1])/2]])    
+    # 原來的點
+    Mouth_pts1 = np.uint32([[landmarks[48,0],landmarks[48,1]],[landmarks[49,0],landmarks[49,1]]
+                       ,[landmarks[50,0],landmarks[50,1]],[landmarks[51,0],landmarks[51,1]]
+                       ,[landmarks[52,0],landmarks[52,1]],[landmarks[53,0],landmarks[53,1]]
+                       ,[landmarks[54,0],landmarks[54,1]],[landmarks[55,0],landmarks[55,1]]
+                       ,[landmarks[56,0],landmarks[56,1]],[landmarks[57,0],landmarks[57,1]]
+                       ,[landmarks[58,0],landmarks[58,1]],[landmarks[59,0],landmarks[59,1]]
+                       ,[(landmarks[48,0]+landmarks[54,0])/2,(landmarks[48,1]+landmarks[54,1])/2]]) 
     
-    Reyepts1 = np.uint32([[landmarks[42,0],landmarks[42,1]],[landmarks[43,0],landmarks[43,1]]
-                       ,[landmarks[44,0],landmarks[44,1]],[landmarks[45,0],landmarks[45,1]]
-                       ,[landmarks[46,0],landmarks[46,1]],[landmarks[47,0],landmarks[47,1]]
-                       ,[(landmarks[42,0]+landmarks[45,0])/2,(landmarks[42,1]+landmarks[45,1])/2]])
+    ''' 
+    start = 49-1
+    end = 60
+    for i in range(start,end): # (48,60) 
+        Mouth_pts1 = np.uint32.append([[landmarks[i,0],landmarks[i,1]]])
+    '''
     
     faceDispts1 = np.uint32([[landmarks[0,0],landmarks[0,1]],[landmarks[4,0],landmarks[4,1]]
                         ,[landmarks[6,0],landmarks[6,1]],[landmarks[8,0],landmarks[8,1]]
                         ,[landmarks[10,0],landmarks[10,1]],[landmarks[12,0],landmarks[12,1]]
                         ,[landmarks[16,0],landmarks[16,1]]])
-    
-    eyeDispts1 = faceDispts1.copy()
-    eyeDispts1 = np.append(eyeDispts1,Leyepts1,axis=0)
-    eyeDispts1 = np.append(eyeDispts1,Reyepts1,axis=0)
-    
-    
+   
     if(state==1):
-        Leyepts2 = eye_deformation_enlarge_Pos(Leyepts1,LeyePosCenter,enlarge_value)    
-        Reyepts2 = eye_deformation_enlarge_Pos(Reyepts1,ReyePosCenter,enlarge_value)
-    elif(state==2):
-        Leyepts2 = eye_deformation_high_Pos(Leyepts1,LeyePosCenter,enlarge_value)    
-        Reyepts2 = eye_deformation_high_Pos(Reyepts1,ReyePosCenter,enlarge_value)
-    elif(state==3):
-        Leyepts2 = eye_deformation_distance_Pos(Leyepts1,-1,enlarge_value)  
-        Reyepts2 = eye_deformation_distance_Pos(Reyepts1,1,enlarge_value)
-    elif(state==4):
-        faceDispts2 = Face_deformation_pos(faceDispts1,facePosCenter,enlarge_value)  
-        
-        
-    if(state==3):
-        eyeDispts2 = faceDispts1.copy()
-        eyeDispts2 = np.append(eyeDispts2,Leyepts2,axis=0)
-        eyeDispts2 = np.append(eyeDispts2,Reyepts2,axis=0)
-        initial = trans(img, eyeDispts1)
-        img3 = initial.deformation(img, eyeDispts2)
-    elif(state==4):
-        initial = trans(img, faceDispts1)
-        img3 = initial.deformation(img, faceDispts2)
-    else:
-        LReyePos1 = Leyepts1.copy()
-        LReyePos1 = np.append(LReyePos1,Reyepts1,axis=0)
-        LReyePos2 = Leyepts2.copy()
-        LReyePos2 = np.append(LReyePos2,Reyepts2,axis=0)
-        initial = trans(img, LReyePos1)
-        img3 = initial.deformation(img, LReyePos2)
+        Mouth_pts2 = eye_deformation_enlarge_Pos(Mouth_pts1,MouthPosCenter,enlarge_value)            
 
-      
-#     Leyepts = tuple(map(tuple, Leyepts2))
-#     Reyepts = tuple(map(tuple, Reyepts2))
-#     eyeDispts = tuple(map(tuple, eyeDispts2))
+    initial = trans(img, Mouth_pts1)
+    img3 = initial.deformation(img, Mouth_pts2)
     
-#     for pos in eyeDispts:
-#         cv2.circle(img3, pos, 5, color=(0, 0, 255),thickness = -1)  
-
-    
-
     return img3
 
 #調整頂點位置放大縮小
@@ -247,3 +227,32 @@ def compute_G(img_coordinate, pi, height, width, thre = 0.9):
     # cita = 1
 
     return cita
+
+#dlib預測器
+detector = dlib.get_frontal_face_detector()    #使用dlib庫提供的人臉提取器
+predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')   #構建特徵提取器
+
+global new_img
+state = eval(input("輸入功能代號:(1=放大縮小"))
+enlarge_value = eval(input("輸入放大縮小的值:(建議 -16~16 之間)"))  #放大縮小的調整 value[-10,10]
+
+# cv2讀取影象
+img = cv2.imread("D:/github/Image-Processing/Final-Project/Face11.png")
+# 取灰度
+img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+# 人臉數rects
+rects = detector(img_gray, 0)
+
+
+for i in range(len(rects)):
+    landmarks = np.matrix([[p.x, p.y] for p in predictor(img,rects[i]).parts()])  #人臉關鍵點識別
+    for idx, point in enumerate(landmarks):        #enumerate函式遍歷序列中的元素及它們的下標
+        pos = (point[0, 0], point[0, 1])       
+        #cv2.circle(img, pos, 5, color=(0, 255, 0),thickness = -1)
+    
+    new_img = mouth_deformation(landmarks,img,state,enlarge_value) 
+      
+    
+cv2.imshow("old", img)
+cv2.imshow("new", new_img)     
+cv2.waitKey(0)  
