@@ -134,7 +134,7 @@ def get_value(event,num):
     imgS,imgN = eye_deformation(landmarks,imgS,num,enlarge_value,imgN)
     #imgN = eye_deformation(landmarks,imgS,num,enlarge_value)
     Renew(imgS)
-    cv2.imshow("imgN",imgN)
+    #cv2.imshow("imgN",imgN)
     #except:
         #print('請選擇照片')
         
@@ -163,7 +163,7 @@ global imgS,img_show,panel,enlarge_value0,new_img,imgO,imgN
    
 window = tk.Tk()
 window.title('人臉五官微調系統')
-window.geometry('960x800')
+window.geometry('1200x950')
 
 div_size = 300
 align_mode = 'nswe'
@@ -234,7 +234,7 @@ mouthlabel = tk.Label(block4,text="嘴巴",font=('新細明體', 12),padx=pad, p
 mouthscale1 = tk.Scale(
     block4, label='大小', from_=-10, to=10, orient="horizontal",tickinterval=5,length=280)
 mouthscale2 = tk.Scale(
-    block4, label='薄厚', from_=0, to=255, orient="horizontal",tickinterval=50,length=280)
+    block4, label='色彩', from_=0, to=255, orient="horizontal",tickinterval=50,length=280)
 
 mouthscale1.bind('<Button-1>', lambda event: get_value0(event, 7))
 mouthscale1.bind('<ButtonRelease-1>', lambda event: get_value(event, 7)) 
